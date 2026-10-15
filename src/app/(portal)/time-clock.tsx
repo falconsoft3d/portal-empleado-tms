@@ -63,11 +63,20 @@ export function TimeClock({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(initialError ? ERRORS[initialError] : null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [taskId, setTaskId] = useState<string>(initial?.open?.task ? String(initial.open.task.id) : "");
   const now = useNowSeconds();
 
   const open = attendance?.open ?? null;
   const today = attendance?.today ?? [];
+  const tasks = attendance?.tasks ?? [];
+  const myTasks = tasks.filter((task) => task.mine);
+  const sharedTasks = tasks.filter((task) => !task.mine);
   const busy = locating || pending;
+
+  function applyAttendance(next: Attendance) {
+    setAttendance(next);
+    setTaskId(next.open?.task ? String(next.open.task.id) : "");
+  }
 
   const display =
     now === null
@@ -81,12 +90,13 @@ export function TimeClock({
     const coords = await getPosition();
     setLocating(false);
     startTransition(async () => {
-      const result = await (open ? registrarSalida(coords) : registrarEntrada(coords));
+      const task = taskId ? Number(taskId) : null;
+      const result = await (open ? registrarSalida(coords, task) : registrarEntrada(coords, task));
       if (result.ok) {
-        setAttendance(result.attendance);
+        applyAttendance(result.attendance);
         if (!coords) setNotice("Registrado sin ubicación: no se pudo obtener tu posición.");
       } else {
-        if (result.attendance) setAttendance(result.attendance);
+        if (result.attendance) applyAttendance(result.attendance);
         setError(ERRORS[result.error]);
       }
     });
@@ -111,6 +121,40 @@ export function TimeClock({
               "Sin registros hoy"
             )}
           </p>
+
+          {tasks.length > 0 && (
+            <label className="mt-4 block text-left">
+              <span className="text-xs font-medium text-muted">
+                {open ? "¿En qué tarea trabajaste?" : "¿En qué tarea vas a trabajar?"} (opcional)
+              </span>
+              <select
+                value={taskId}
+                onChange={(event) => setTaskId(event.target.value)}
+                disabled={busy}
+                className="mt-1 h-10 w-full rounded-xl border border-line bg-surface px-3 text-sm text-ink outline-none focus:border-accent focus:ring-4 focus:ring-accent/15"
+              >
+                <option value="">Sin tarea</option>
+                {myTasks.length > 0 && (
+                  <optgroup label="Mis tareas">
+                    {myTasks.map((task) => (
+                      <option key={task.id} value={task.id}>
+                        {task.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                {sharedTasks.length > 0 && (
+                  <optgroup label="Para todos">
+                    {sharedTasks.map((task) => (
+                      <option key={task.id} value={task.id}>
+                        {task.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+              </select>
+            </label>
+          )}
 
           <div className="mt-4 flex items-center gap-2">
             <span
@@ -162,10 +206,13 @@ export function TimeClock({
             {today.map((record) => (
               <li
                 key={record.id}
-                className="flex items-center justify-between rounded-lg border border-line px-3 py-2 text-sm"
+                className="flex items-center justify-between gap-2 rounded-lg border border-line px-3 py-2 text-sm"
               >
-                <span className="tabular-nums text-ink">
-                  {formatHour(record.start)} → {record.end ? formatHour(record.end) : "en curso"}
+                <span className="min-w-0">
+                  <span className="block tabular-nums text-ink">
+                    {formatHour(record.start)} → {record.end ? formatHour(record.end) : "en curso"}
+                  </span>
+                  {record.task && <span className="block truncate text-xs text-muted">{record.task.name}</span>}
                 </span>
                 <span className="tabular-nums text-xs text-muted" suppressHydrationWarning>
                   {now === null ? "" : formatDuration(recordSeconds(record, now)).slice(0, 5)} h

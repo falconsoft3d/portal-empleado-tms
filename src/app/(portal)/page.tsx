@@ -1,10 +1,12 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import { Brand } from "@/components/brand";
-import { LogoutIcon } from "@/components/icons";
-import { odooGetAttendance } from "@/lib/odoo";
+import { odooGetAttendance, odooGetConceptRequests } from "@/lib/odoo";
+import { firstName } from "@/lib/names";
 import { getSession } from "@/lib/session";
-import { logout } from "./actions";
+import { Birthdays, BirthdaysSkeleton } from "./birthdays";
+import { ConceptRequests } from "./concept-requests";
+import { NewsBoard } from "./news-board";
+import { PortalHeader, PortalHeaderSkeleton } from "./portal-header";
 import { TimeClock } from "./time-clock";
 
 export default function HomePage() {
@@ -15,21 +17,6 @@ export default function HomePage() {
   );
 }
 
-function initials(name: string) {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join("");
-}
-
-/** Los nombres vienen como "APELLIDO Nombre": toma el primer nombre. */
-function firstName(name: string) {
-  const words = name.split(/\s+/).filter(Boolean);
-  return words.find((word) => word !== word.toUpperCase()) ?? words[0] ?? "";
-}
-
 async function Home() {
   const session = await getSession();
   if (!session) redirect("/login");
@@ -37,35 +24,14 @@ async function Home() {
 
   return (
     <div className="min-h-screen">
-      <header className="flex items-center justify-between border-b border-line bg-surface px-4 py-3 sm:px-6">
-        <Brand />
-        <div className="flex items-center gap-3">
-          <div className="hidden text-right sm:block">
-            <p className="text-sm font-medium text-ink">{session.name}</p>
-            {session.jobTitle && <p className="text-xs text-muted">{session.jobTitle}</p>}
-          </div>
-          <span className="grid size-9 place-items-center rounded-full bg-accent-soft text-sm font-semibold text-accent">
-            {initials(session.name)}
-          </span>
-          <form action={logout}>
-            <button
-              type="submit"
-              aria-label="Cerrar sesión"
-              title="Cerrar sesión"
-              className="grid size-9 place-items-center rounded-lg border border-line text-muted transition hover:bg-surface-muted hover:text-ink"
-            >
-              <LogoutIcon className="size-4" />
-            </button>
-          </form>
-        </div>
-      </header>
+      <PortalHeader session={session} />
 
       <main className="mx-auto grid max-w-6xl gap-4 p-4 sm:p-6 lg:grid-cols-[minmax(0,300px)_minmax(0,1fr)]">
         <TimeClock
           initial={attendance.ok ? attendance.attendance : null}
           initialError={attendance.ok ? null : attendance.error}
         />
-        <div>
+        <div className="flex flex-col gap-4">
           <section className="rounded-2xl border border-line bg-surface p-6">
             <p className="text-sm text-muted">{session.company}</p>
             <h1 className="mt-1 text-2xl font-semibold tracking-tight text-ink">
@@ -76,19 +42,30 @@ async function Home() {
               calendario y más.
             </p>
           </section>
+          <Suspense fallback={<div className="h-64 animate-pulse rounded-2xl border border-line bg-surface" />}>
+            <NewsBoard token={session.odooToken} />
+          </Suspense>
+          <Suspense fallback={<div className="h-40 animate-pulse rounded-2xl border border-line bg-surface" />}>
+            <ConceptRequestsSection token={session.odooToken} />
+          </Suspense>
+          <Suspense fallback={<BirthdaysSkeleton />}>
+            <Birthdays token={session.odooToken} />
+          </Suspense>
         </div>
       </main>
     </div>
   );
 }
 
+async function ConceptRequestsSection({ token }: { token: string }) {
+  const result = await odooGetConceptRequests(token);
+  return result.ok ? <ConceptRequests initial={result.data} /> : null;
+}
+
 function HomeSkeleton() {
   return (
     <div className="min-h-screen">
-      <header className="flex items-center justify-between border-b border-line bg-surface px-4 py-3 sm:px-6">
-        <Brand />
-        <span className="size-9 animate-pulse rounded-full bg-line" />
-      </header>
+      <PortalHeaderSkeleton />
       <main className="mx-auto grid max-w-6xl gap-4 p-4 sm:p-6 lg:grid-cols-[minmax(0,300px)_minmax(0,1fr)]">
         <div className="h-56 animate-pulse rounded-2xl border border-line bg-surface" />
         <div className="h-32 animate-pulse rounded-2xl border border-line bg-surface" />

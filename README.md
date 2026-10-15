@@ -21,6 +21,23 @@ si el empleado la permite.
 - El login devuelve un token firmado por Odoo (`database.secret`, 12 h) que se guarda en la sesión y se envía
   en la cabecera `X-TMS-Portal-Token`; Odoo solo deja fichar al empleado de ese token.
 - Endpoints: `GET /tms/api/portal/attendance`, `POST /tms/api/portal/attendance/check_in` y `.../check_out`.
+- Al fichar, el empleado puede elegir opcionalmente una tarea de **Planillas → Tareas Empleado**: las asignadas a
+  él o las que no tienen empleado (para todos). Se envía como `tarea_id`.
+- La tarjeta **Cumpleaños de hoy** usa `GET /tms/api/portal/birthdays` (foto y nombre de los empleados).
+
+## Solicitud de conceptos (horas extras, etc.)
+
+La tarjeta **Solicitar concepto** lista los conceptos de nómina marcados con *Solicitar desde Portal*. El empleado
+indica cantidad, fecha y una nota opcional; la solicitud llega a **Planillas → Aprobación de Conceptos**
+(`tms.aprobacion.concepto`), donde se pasa de *Solicitado* a *Aprobado* o *Rechazado*. El empleado ve el estado de
+sus últimas 10 solicitudes. Endpoints: `GET` y `POST /tms/api/portal/concept_requests`.
+
+## Tablón de anuncios y perfil
+
+- **Tablón de anuncios**: últimas 6 noticias de **Planillas → Noticias** (`tms.noticia`) con fecha de hoy o anterior.
+  Las imágenes se piden a Odoo con el token del empleado a través de `/api/news/[id]/image`.
+- **Mi perfil** (`/perfil`, desde el avatar de la cabecera): el empleado cambia su contraseña del portal
+  (`POST /tms/api/portal/change_password`, mínimo 6 caracteres).
 
 ## Puesta en marcha
 
