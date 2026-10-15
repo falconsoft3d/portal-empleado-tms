@@ -25,12 +25,13 @@ export async function login(_prev: LoginState, formData: FormData): Promise<Logi
     };
   }
 
-  const { employee } = result;
+  const { employee, token } = result;
   await createSession({
     employeeId: employee.id,
     name: employee.name,
     jobTitle: employee.job_title,
     company: employee.company,
+    odooToken: token,
   });
   redirect("/");
 }

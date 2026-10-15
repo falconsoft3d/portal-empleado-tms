@@ -12,6 +12,16 @@ Para iniciar sesión se usan las credenciales de la pestaña **TMS Portal** de l
 3. Si Odoo valida al empleado, se guarda una cookie `httpOnly` firmada (JWT HS256, 8 h) con su id, nombre, puesto y compañía.
 4. `src/proxy.ts` redirige a `/login` si no hay sesión válida; las páginas vuelven a validar la sesión en el servidor.
 
+## Registro de asistencia (Cronómetro)
+
+En la página de inicio el empleado registra su **entrada** y **salida**. Cada fichada se guarda en Odoo en
+**Planillas → Horas Portal** (`tms.horas.portal`, módulo `l10n_ar_payroll_tms`) con la ubicación del navegador
+si el empleado la permite.
+
+- El login devuelve un token firmado por Odoo (`database.secret`, 12 h) que se guarda en la sesión y se envía
+  en la cabecera `X-TMS-Portal-Token`; Odoo solo deja fichar al empleado de ese token.
+- Endpoints: `GET /tms/api/portal/attendance`, `POST /tms/api/portal/attendance/check_in` y `.../check_out`.
+
 ## Puesta en marcha
 
 ```bash

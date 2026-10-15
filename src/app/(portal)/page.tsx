@@ -2,8 +2,10 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { Brand } from "@/components/brand";
 import { LogoutIcon } from "@/components/icons";
+import { odooGetAttendance } from "@/lib/odoo";
 import { getSession } from "@/lib/session";
 import { logout } from "./actions";
+import { TimeClock } from "./time-clock";
 
 export default function HomePage() {
   return (
@@ -22,9 +24,16 @@ function initials(name: string) {
     .join("");
 }
 
+/** Los nombres vienen como "APELLIDO Nombre": toma el primer nombre. */
+function firstName(name: string) {
+  const words = name.split(/\s+/).filter(Boolean);
+  return words.find((word) => word !== word.toUpperCase()) ?? words[0] ?? "";
+}
+
 async function Home() {
   const session = await getSession();
   if (!session) redirect("/login");
+  const attendance = await odooGetAttendance(session.odooToken);
 
   return (
     <div className="min-h-screen">
@@ -51,14 +60,23 @@ async function Home() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl p-4 sm:p-6">
-        <section className="rounded-2xl border border-line bg-surface p-6">
-          <p className="text-sm text-muted">{session.company}</p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-ink">Hola, {session.name.split(" ")[0]} 👋</h1>
-          <p className="mt-2 text-sm text-muted">
-            Has iniciado sesión en el Portal del Empleado. Pronto encontrarás aquí tu cronómetro, tareas, calendario y más.
-          </p>
-        </section>
+      <main className="mx-auto grid max-w-6xl gap-4 p-4 sm:p-6 lg:grid-cols-[minmax(0,300px)_minmax(0,1fr)]">
+        <TimeClock
+          initial={attendance.ok ? attendance.attendance : null}
+          initialError={attendance.ok ? null : attendance.error}
+        />
+        <div>
+          <section className="rounded-2xl border border-line bg-surface p-6">
+            <p className="text-sm text-muted">{session.company}</p>
+            <h1 className="mt-1 text-2xl font-semibold tracking-tight text-ink">
+              Hola, {firstName(session.name)} 👋
+            </h1>
+            <p className="mt-2 text-sm text-muted">
+              Registra tu entrada al empezar la jornada y tu salida al terminarla. Pronto encontrarás aquí tus tareas,
+              calendario y más.
+            </p>
+          </section>
+        </div>
       </main>
     </div>
   );
@@ -71,7 +89,8 @@ function HomeSkeleton() {
         <Brand />
         <span className="size-9 animate-pulse rounded-full bg-line" />
       </header>
-      <main className="mx-auto max-w-6xl p-4 sm:p-6">
+      <main className="mx-auto grid max-w-6xl gap-4 p-4 sm:p-6 lg:grid-cols-[minmax(0,300px)_minmax(0,1fr)]">
+        <div className="h-56 animate-pulse rounded-2xl border border-line bg-surface" />
         <div className="h-32 animate-pulse rounded-2xl border border-line bg-surface" />
       </main>
     </div>

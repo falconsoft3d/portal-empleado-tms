@@ -91,3 +91,10 @@ export const SpinnerIcon = (p: IconProps) => (
     <path d="M12 3a9 9 0 1 0 9 9" />
   </Icon>
 );
+
+export const MapPinIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12Z" />
+    <circle cx="12" cy="9" r="2.5" />
+  </Icon>
+);

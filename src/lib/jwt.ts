@@ -8,6 +8,8 @@ export type SessionPayload = {
   name: string;
   jobTitle: string;
   company: string;
+  /** Token firmado por Odoo para las llamadas del empleado. */
+  odooToken: string;
 };
 
 function secretKey() {
@@ -31,11 +33,14 @@ export async function decrypt(token: string | undefined): Promise<SessionPayload
   const key = secretKey();
   try {
     const { payload } = await jwtVerify<SessionPayload>(token, key, { algorithms: ["HS256"] });
+    // Sesiones anteriores sin token de Odoo: obligan a volver a iniciar sesión.
+    if (typeof payload.odooToken !== "string") return null;
     return {
       employeeId: payload.employeeId,
       name: payload.name,
       jobTitle: payload.jobTitle,
       company: payload.company,
+      odooToken: payload.odooToken,
     };
   } catch {
     return null;
