@@ -1,6 +1,5 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { PortalHeader, PortalHeaderSkeleton } from "../portal-header";
@@ -26,9 +25,6 @@ async function Profile() {
     <div className="min-h-screen">
       <PortalHeader session={session} />
       <main className="mx-auto flex max-w-xl flex-col gap-4 p-4 sm:p-6">
-        <Link href="/" className="text-sm text-muted transition hover:text-ink">
-          ← Volver al inicio
-        </Link>
         <section className="rounded-2xl border border-line bg-surface p-6">
           <p className="text-sm text-muted">{session.company}</p>
           <h1 className="mt-1 text-xl font-semibold tracking-tight text-ink">{session.name}</h1>

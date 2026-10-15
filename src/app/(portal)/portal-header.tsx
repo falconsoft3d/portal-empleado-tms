@@ -9,7 +9,7 @@ import { logout } from "./actions";
 
 export function PortalHeader({ session }: { session: SessionPayload }) {
   return (
-    <header className="flex items-center justify-between border-b border-line bg-surface px-4 py-3 sm:px-6">
+    <header className="sticky top-0 z-30 flex items-center justify-between border-b border-line bg-surface/90 px-4 py-3 backdrop-blur sm:px-6">
       <Link href="/" aria-label="Inicio" className="min-w-0">
         <CompanyBrand company={session.company} />
       </Link>
@@ -41,7 +41,7 @@ export function PortalHeader({ session }: { session: SessionPayload }) {
 
 export function PortalHeaderSkeleton() {
   return (
-    <header className="flex items-center justify-between border-b border-line bg-surface px-4 py-3 sm:px-6">
+    <header className="sticky top-0 z-30 flex items-center justify-between border-b border-line bg-surface/90 px-4 py-3 backdrop-blur sm:px-6">
       <Brand />
       <span className="size-9 animate-pulse rounded-full bg-line" />
     </header>

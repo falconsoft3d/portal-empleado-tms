@@ -26,7 +26,7 @@ export function CompanyBrand({ company }: { company: string }) {
       )}
       <span className="min-w-0 leading-tight">
         <span className="block truncate text-sm font-semibold text-ink">{company || "TMS Energy"}</span>
-        <span className="block text-xs text-muted">Portal del Empleado</span>
+        <span className="hidden text-xs text-muted sm:block">Portal del Empleado</span>
       </span>
     </div>
   );
