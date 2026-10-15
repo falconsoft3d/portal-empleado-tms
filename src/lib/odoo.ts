@@ -30,7 +30,10 @@ export type Attendance = {
   tasks: AttendanceTask[];
 };
 
-export type Birthday = { id: number; name: string; job_title: string; image: string | null };
+export type Birthday = { id: number; name: string; job_title: string; day: number; has_image: boolean };
+
+/** Cumpleaños del mes: `date` es hoy (YYYY-MM-DD) según la zona horaria del empleado. */
+export type Birthdays = { date: string; today: Birthday[]; month: Birthday[] };
 
 export type ConceptRequestState = "solicitado" | "aprobado" | "rechazado";
 
@@ -140,11 +143,11 @@ export function odooRegisterAttendance(
   });
 }
 
-/** Empleados que cumplen años hoy. */
-export async function odooGetBirthdays(token: string): Promise<Birthday[] | null> {
+/** Cumpleaños de hoy y del resto del mes. */
+export async function odooGetBirthdays(token: string): Promise<Birthdays | null> {
   try {
     const { res, data } = await odooFetch("/tms/api/portal/birthdays", { method: "GET", token });
-    if (res.ok && data?.ok) return data.birthdays;
+    if (res.ok && data?.ok) return { date: data.date, today: data.today, month: data.month };
     console.error("[odoo] cumpleaños: respuesta inesperada", res.status, data);
   } catch (error) {
     unstable_rethrow(error);
@@ -195,16 +198,16 @@ export async function odooGetNews(token: string): Promise<NewsItem[] | null> {
   return null;
 }
 
-/** Imagen de una noticia (respuesta binaria de Odoo, o null si no existe). */
-export async function odooGetNewsImage(token: string, newsId: number): Promise<Response | null> {
+/** Archivo binario de Odoo (imágenes) pedido con el token del empleado, o null si no existe. */
+export async function odooGetBinary(token: string, path: string): Promise<Response | null> {
   try {
-    const res = await fetch(odooUrl(`/tms/api/portal/news/${newsId}/image`), {
+    const res = await fetch(odooUrl(path), {
       headers: odooHeaders(token),
       signal: AbortSignal.timeout(10_000),
     });
     return res.ok ? res : null;
   } catch (error) {
-    console.error("[odoo] imagen de noticia: no se pudo conectar", error);
+    console.error("[odoo] binario: no se pudo conectar", path, error);
     return null;
   }
 }
