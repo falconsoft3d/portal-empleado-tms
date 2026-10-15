@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Brand } from "@/components/brand";
 import { BuildingIcon, CheckIcon, HomeIcon, PlayIcon } from "@/components/icons";
 import { LiveClock } from "@/components/live-clock";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { LoginForm } from "./login-form";
 
 export const metadata: Metadata = {
@@ -10,7 +11,8 @@ export const metadata: Metadata = {
 
 export default function LoginPage() {
   return (
-    <main className="flex min-h-screen items-center justify-center p-4 sm:p-8">
+    <main className="relative flex min-h-screen items-center justify-center p-4 sm:p-8">
+      <ThemeToggle className="absolute right-4 top-4" />
       <div className="grid w-full max-w-5xl grid-cols-1 overflow-hidden rounded-3xl border border-line bg-surface shadow-[0_24px_60px_-30px_rgba(28,34,48,0.25)] lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
         <section className="flex flex-col p-6 sm:p-12">
           <Brand />

@@ -1,10 +1,11 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import { odooGetAttendance, odooGetConceptRequests } from "@/lib/odoo";
+import { odooGetAttendance, odooGetAttendanceMonth, odooGetConceptRequests } from "@/lib/odoo";
 import { firstName } from "@/lib/names";
 import { getSession } from "@/lib/session";
 import { Birthdays, BirthdaysSkeleton } from "./birthdays";
 import { ConceptRequests } from "./concept-requests";
+import { MonthCalendar } from "./month-calendar";
 import { NewsBoard } from "./news-board";
 import { PortalHeader, PortalHeaderSkeleton } from "./portal-header";
 import { TimeClock } from "./time-clock";
@@ -27,10 +28,15 @@ async function Home() {
       <PortalHeader session={session} />
 
       <main className="mx-auto grid max-w-6xl gap-4 p-4 sm:p-6 lg:grid-cols-[minmax(0,300px)_minmax(0,1fr)]">
-        <TimeClock
-          initial={attendance.ok ? attendance.attendance : null}
-          initialError={attendance.ok ? null : attendance.error}
-        />
+        <div className="flex flex-col gap-4">
+          <TimeClock
+            initial={attendance.ok ? attendance.attendance : null}
+            initialError={attendance.ok ? null : attendance.error}
+          />
+          <Suspense fallback={<div className="h-80 animate-pulse rounded-2xl border border-line bg-surface" />}>
+            <MonthCalendarSection token={session.odooToken} />
+          </Suspense>
+        </div>
         <div className="flex flex-col gap-4">
           <section className="rounded-2xl border border-line bg-surface p-6">
             <p className="text-sm text-muted">{session.company}</p>
@@ -55,6 +61,14 @@ async function Home() {
       </main>
     </div>
   );
+}
+
+async function MonthCalendarSection({ token }: { token: string }) {
+  const month = await odooGetAttendanceMonth(token);
+  if (!month) return null;
+  // La clave cambia cuando hay fichadas nuevas: el calendario se reinicia con los datos frescos.
+  const records = Object.values(month.days).flatMap((day) => day.records.map((r) => `${r.id}:${r.end ?? ""}`));
+  return <MonthCalendar key={`${month.month}|${records.join(",")}`} initial={month} />;
 }
 
 async function ConceptRequestsSection({ token }: { token: string }) {

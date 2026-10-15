@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { ChevronDownIcon } from "@/components/icons";
 import { odooGetBirthdays, type Birthday } from "@/lib/odoo";
 import { initials } from "@/lib/names";
 
@@ -49,11 +50,14 @@ export async function Birthdays({ token }: { token: string }) {
       )}
 
       {data && data.month.length > 0 && (
-        <>
-          <h3 className="mt-5 mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
-            Este mes · {monthName}
-          </h3>
-          <ul className="grid gap-x-4 gap-y-1 sm:grid-cols-2">
+        <details className="group mt-4 border-t border-line pt-3">
+          <summary className="flex cursor-pointer list-none items-center justify-between text-xs font-semibold uppercase tracking-wide text-muted transition hover:text-ink">
+            <span>
+              Este mes · {monthName} ({data.month.length})
+            </span>
+            <ChevronDownIcon className="size-4 transition group-open:rotate-180" />
+          </summary>
+          <ul className="mt-2 grid gap-x-4 gap-y-1 sm:grid-cols-2">
             {data.month.map((person) => {
               const past = person.day < day;
               return (
@@ -67,7 +71,7 @@ export async function Birthdays({ token }: { token: string }) {
               );
             })}
           </ul>
-        </>
+        </details>
       )}
     </section>
   );

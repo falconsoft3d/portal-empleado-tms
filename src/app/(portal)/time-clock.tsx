@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useSyncExternalStore, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { BuildingIcon, LogoutIcon, MapPinIcon, PlayIcon, SpinnerIcon } from "@/components/icons";
 import type { Attendance, AttendanceError, AttendanceRecord, Coords } from "@/lib/odoo";
 import { registrarEntrada, registrarSalida } from "./actions";
@@ -64,7 +65,9 @@ export function TimeClock({
   const [error, setError] = useState<string | null>(initialError ? ERRORS[initialError] : null);
   const [notice, setNotice] = useState<string | null>(null);
   const [taskId, setTaskId] = useState<string>(initial?.open?.task ? String(initial.open.task.id) : "");
+  const [comment, setComment] = useState("");
   const now = useNowSeconds();
+  const router = useRouter();
 
   const open = attendance?.open ?? null;
   const today = attendance?.today ?? [];
@@ -91,9 +94,11 @@ export function TimeClock({
     setLocating(false);
     startTransition(async () => {
       const task = taskId ? Number(taskId) : null;
-      const result = await (open ? registrarSalida(coords, task) : registrarEntrada(coords, task));
+      const result = await (open ? registrarSalida(coords, task, comment) : registrarEntrada(coords, task, comment));
       if (result.ok) {
         applyAttendance(result.attendance);
+        setComment("");
+        router.refresh(); // actualiza el calendario mensual
         if (!coords) setNotice("Registrado sin ubicación: no se pudo obtener tu posición.");
       } else {
         if (result.attendance) applyAttendance(result.attendance);
@@ -156,6 +161,19 @@ export function TimeClock({
             </label>
           )}
 
+          <label className="mt-3 block text-left">
+            <span className="text-xs font-medium text-muted">Comentario (opcional)</span>
+            <textarea
+              value={comment}
+              onChange={(event) => setComment(event.target.value)}
+              disabled={busy || !attendance}
+              rows={2}
+              maxLength={1000}
+              placeholder={open ? "Ej.: Terminé la carga sin novedades." : "Ej.: Empiezo en planta norte."}
+              className="mt-1 w-full resize-none rounded-xl border border-line bg-surface px-3 py-2 text-sm text-ink outline-none placeholder:text-muted/70 focus:border-accent focus:ring-4 focus:ring-accent/15"
+            />
+          </label>
+
           <div className="mt-4 flex items-center gap-2">
             <span
               className={`grid size-10 shrink-0 place-items-center rounded-xl ${
@@ -213,8 +231,13 @@ export function TimeClock({
                     {formatHour(record.start)} → {record.end ? formatHour(record.end) : "en curso"}
                   </span>
                   {record.task && <span className="block truncate text-xs text-muted">{record.task.name}</span>}
+                  {record.comment && (
+                    <span className="block truncate text-xs italic text-muted" title={record.comment}>
+                      “{record.comment}”
+                    </span>
+                  )}
                 </span>
-                <span className="tabular-nums text-xs text-muted" suppressHydrationWarning>
+                <span className="shrink-0 whitespace-nowrap tabular-nums text-xs text-muted" suppressHydrationWarning>
                   {now === null ? "" : formatDuration(recordSeconds(record, now)).slice(0, 5)} h
                 </span>
               </li>

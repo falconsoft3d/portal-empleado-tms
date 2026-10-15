@@ -19,6 +19,7 @@ export type AttendanceRecord = {
   start: string;
   end: string | null;
   task: { id: number; name: string } | null;
+  comment: string;
 };
 
 /** Tarea que el empleado puede elegir: asignada a él (`mine`) o para todos. */
@@ -130,16 +131,17 @@ export function odooGetAttendance(token: string) {
   return attendanceRequest("/tms/api/portal/attendance", token, { method: "GET" });
 }
 
-/** Registra la entrada o la salida en Horas Portal, con la tarea elegida (opcional). */
+/** Registra la entrada o la salida en Horas Portal, con tarea y comentario opcionales. */
 export function odooRegisterAttendance(
   token: string,
   kind: "check_in" | "check_out",
   coords: Coords,
   taskId: number | null,
+  comment: string,
 ) {
   return attendanceRequest(`/tms/api/portal/attendance/${kind}`, token, {
     method: "POST",
-    body: JSON.stringify({ ...coords, tarea_id: taskId }),
+    body: JSON.stringify({ ...coords, tarea_id: taskId, comentario: comment }),
   });
 }
 
@@ -237,4 +239,24 @@ export async function odooChangePassword(
     console.error("[odoo] cambio de contraseña: no se pudo conectar", error);
   }
   return { ok: false, error: "unavailable" };
+}
+
+/** Horas imputadas por día (clave YYYY-MM-DD) en un mes. */
+export type AttendanceMonth = {
+  month: string;
+  today: string;
+  days: Record<string, { hours: number; records: AttendanceRecord[] }>;
+};
+
+export async function odooGetAttendanceMonth(token: string, month?: string): Promise<AttendanceMonth | null> {
+  const query = month ? `?month=${encodeURIComponent(month)}` : "";
+  try {
+    const { res, data } = await odooFetch(`/tms/api/portal/attendance/month${query}`, { method: "GET", token });
+    if (res.ok && data?.ok) return { month: data.month, today: data.today, days: data.days };
+    console.error("[odoo] calendario: respuesta inesperada", res.status, data);
+  } catch (error) {
+    unstable_rethrow(error);
+    console.error("[odoo] calendario: no se pudo conectar", error);
+  }
+  return null;
 }

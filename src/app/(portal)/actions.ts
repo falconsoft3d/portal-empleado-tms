@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import {
   odooCreateConceptRequest,
+  odooGetAttendanceMonth,
   odooRegisterAttendance,
   type AttendanceResult,
   type ConceptRequests,
@@ -28,19 +29,21 @@ async function registerAttendance(
   kind: "check_in" | "check_out",
   coords: Coords,
   taskId: number | null,
+  comment: string,
 ): Promise<AttendanceResult> {
   const session = await getSession();
   if (!session) redirect("/login");
   const task = Number.isInteger(taskId) && taskId! > 0 ? taskId : null;
-  return odooRegisterAttendance(session.odooToken, kind, sanitizeCoords(coords), task);
+  const text = typeof comment === "string" ? comment.trim().slice(0, 1000) : "";
+  return odooRegisterAttendance(session.odooToken, kind, sanitizeCoords(coords), task, text);
 }
 
-export async function registrarEntrada(coords: Coords, taskId: number | null) {
-  return registerAttendance("check_in", coords, taskId);
+export async function registrarEntrada(coords: Coords, taskId: number | null, comment: string) {
+  return registerAttendance("check_in", coords, taskId, comment);
 }
 
-export async function registrarSalida(coords: Coords, taskId: number | null) {
-  return registerAttendance("check_out", coords, taskId);
+export async function registrarSalida(coords: Coords, taskId: number | null, comment: string) {
+  return registerAttendance("check_out", coords, taskId, comment);
 }
 
 export type ConceptRequestFormState = {
@@ -82,4 +85,12 @@ export async function solicitarConcepto(
   });
   if (!result.ok) return { ...prev, success: undefined, error: CONCEPT_ERRORS[result.error] };
   return { data: result.data, success: "Solicitud enviada. Te avisaremos cuando la revisen.", version: prev.version + 1 };
+}
+
+/** Horas por día de otro mes del calendario (YYYY-MM). */
+export async function obtenerMes(month: string) {
+  const session = await getSession();
+  if (!session) redirect("/login");
+  if (!/^\d{4}-\d{2}$/.test(month)) return null;
+  return odooGetAttendanceMonth(session.odooToken, month);
 }
