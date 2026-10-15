@@ -260,3 +260,18 @@ export async function odooGetAttendanceMonth(token: string, month?: string): Pro
   }
   return null;
 }
+
+export type Resource = { id: number; name: string; filename: string };
+
+/** Recursos de la empresa visibles para el empleado (generales y asignados a él). */
+export async function odooGetResources(token: string): Promise<Resource[] | null> {
+  try {
+    const { res, data } = await odooFetch("/tms/api/portal/resources", { method: "GET", token });
+    if (res.ok && data?.ok) return data.resources;
+    console.error("[odoo] recursos: respuesta inesperada", res.status, data);
+  } catch (error) {
+    unstable_rethrow(error);
+    console.error("[odoo] recursos: no se pudo conectar", error);
+  }
+  return null;
+}

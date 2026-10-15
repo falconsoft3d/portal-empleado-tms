@@ -20,6 +20,23 @@ export async function proxyOdooImage(odooPath: string, maxAgeSeconds: number) {
   });
 }
 
+/** Reenvía un archivo descargable de Odoo (conserva el nombre del archivo). */
+export async function proxyOdooFile(odooPath: string) {
+  const session = await getSession();
+  if (!session) return new Response("No autorizado", { status: 401 });
+
+  const file = await odooGetBinary(session.odooToken, odooPath);
+  if (!file?.body) return new Response("No encontrado", { status: 404 });
+
+  const headers: Record<string, string> = {
+    "Content-Type": file.headers.get("Content-Type") ?? "application/octet-stream",
+    "Cache-Control": "private, no-store",
+  };
+  const disposition = file.headers.get("Content-Disposition");
+  if (disposition) headers["Content-Disposition"] = disposition;
+  return new Response(file.body, { headers });
+}
+
 export function parseId(value: string) {
   const id = Number(value);
   return Number.isInteger(id) && id > 0 ? id : null;

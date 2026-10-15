@@ -6,6 +6,7 @@ import { getSession } from "@/lib/session";
 import { Birthdays, BirthdaysSkeleton } from "./birthdays";
 import { ConceptRequests } from "./concept-requests";
 import { MonthCalendar } from "./month-calendar";
+import { Resources } from "./resources";
 import { NewsBoard } from "./news-board";
 import { PortalHeader, PortalHeaderSkeleton } from "./portal-header";
 import { TimeClock } from "./time-clock";
@@ -35,6 +36,9 @@ async function Home() {
           />
           <Suspense fallback={<div className="h-80 animate-pulse rounded-2xl border border-line bg-surface" />}>
             <MonthCalendarSection token={session.odooToken} />
+          </Suspense>
+          <Suspense fallback={<div className="h-32 animate-pulse rounded-2xl border border-line bg-surface" />}>
+            <Resources token={session.odooToken} />
           </Suspense>
         </div>
         <div className="flex flex-col gap-4">
