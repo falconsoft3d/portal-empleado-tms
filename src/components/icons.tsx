@@ -126,3 +126,35 @@ export const DashboardIcon = (p: IconProps) => (
     <rect x="3" y="16" width="7" height="5" rx="1.5" />
   </Icon>
 );
+
+export const MenuIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M4 6h16M4 12h16M4 18h16" />
+  </Icon>
+);
+
+export const GraduationCapIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="m2 9 10-5 10 5-10 5z" />
+    <path d="M6 11v5c0 1.7 2.7 3 6 3s6-1.3 6-3v-5M22 9v6" />
+  </Icon>
+);
+
+export const PlayCircleIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="m10 8.5 5 3.5-5 3.5z" />
+  </Icon>
+);
+
+export const PaperclipIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="m21 11.5-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l7.9-7.9" />
+  </Icon>
+);
+
+export const ChevronLeftIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="m15 6-6 6 6 6" />
+  </Icon>
+);

@@ -7,7 +7,7 @@ const inter = Inter({
   subsets: ["latin"],
 });
 
-const THEME_SCRIPT = `(function(){try{var t=localStorage.getItem("theme");if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t)}catch(e){}})()`;
+const THEME_SCRIPT = `(function(){try{var d=document.documentElement,t=localStorage.getItem("theme");if(t==="dark"||t==="light")d.setAttribute("data-theme",t);if(localStorage.getItem("sidebar")==="hidden")d.setAttribute("data-sidebar","hidden")}catch(e){}})()`;
 
 export const metadata: Metadata = {
   title: "Portal del Empleado · TMS Energy",
@@ -18,7 +18,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="es" className={`${inter.variable} h-full antialiased`} suppressHydrationWarning>
       <head>
-        {/* Aplica el tema guardado antes del primer pintado (evita el destello claro/oscuro). */}
+        {/* Aplica el tema y el estado del menú guardados antes del primer pintado (evita destellos). */}
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>
       <body className="min-h-full flex flex-col font-sans">{children}</body>

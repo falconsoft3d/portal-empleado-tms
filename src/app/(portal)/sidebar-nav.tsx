@@ -2,12 +2,18 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { DashboardIcon, UserIcon } from "@/components/icons";
+import { DashboardIcon, GraduationCapIcon, UserIcon } from "@/components/icons";
 
 const ITEMS = [
   { href: "/", label: "Dashboard", Icon: DashboardIcon },
+  { href: "/capacitacion", label: "Capacitación", Icon: GraduationCapIcon },
   { href: "/perfil", label: "Perfil", Icon: UserIcon },
 ] as const;
+
+/** La ruta raíz solo se marca activa en sí misma; el resto también en sus subpáginas. */
+function isActive(pathname: string, href: string) {
+  return href === "/" ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
+}
 
 /** Menú del portal: barra lateral en escritorio y barra de pestañas inferior en móvil. */
 export function SidebarNav() {
@@ -17,12 +23,12 @@ export function SidebarNav() {
     <>
       <nav
         aria-label="Menú principal"
-        className="fixed inset-y-0 left-0 z-40 hidden w-56 flex-col border-r border-line bg-surface px-3 py-4 lg:flex"
+        className="fixed inset-y-0 left-0 z-40 hidden w-56 flex-col border-r border-line bg-surface px-3 py-4 lg:flex lg:sidebar-hidden:hidden"
       >
         <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-muted">Menú</p>
         <ul className="space-y-1">
           {ITEMS.map(({ href, label, Icon }) => {
-            const active = pathname === href;
+            const active = isActive(pathname, href);
             return (
               <li key={href}>
                 <Link
@@ -43,10 +49,10 @@ export function SidebarNav() {
 
       <nav
         aria-label="Menú principal"
-        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-2 border-t border-line bg-surface/95 backdrop-blur lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-3 border-t border-line bg-surface/95 backdrop-blur lg:hidden"
       >
         {ITEMS.map(({ href, label, Icon }) => {
-          const active = pathname === href;
+          const active = isActive(pathname, href);
           return (
             <Link
               key={href}

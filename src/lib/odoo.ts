@@ -275,3 +275,55 @@ export async function odooGetResources(token: string): Promise<Resource[] | null
   }
   return null;
 }
+
+export type CourseLink = { id: number; name: string; url: string };
+
+export type CourseContent = {
+  id: number;
+  name: string;
+  description: string;
+  lines: CourseLink[];
+  annexes: CourseLink[];
+};
+
+export type CourseSection = { id: number; name: string; description: string; contents: CourseContent[] };
+
+export type Course = {
+  id: number;
+  name: string;
+  description: string;
+  career: { id: number; name: string; has_image: boolean };
+  /** Imagen del curso o, si no tiene, la de su carrera. */
+  has_image: boolean;
+  section_count: number;
+  content_count: number;
+};
+
+export type CourseDetail = Course & { sections: CourseSection[] };
+
+/** Cursos visibles para el empleado: los de sus carreras y aquellos en los que está inscrito. */
+export async function odooGetCourses(token: string): Promise<Course[] | null> {
+  try {
+    const { res, data } = await odooFetch("/tms/api/portal/courses", { method: "GET", token });
+    if (res.ok && data?.ok) return data.courses;
+    console.error("[odoo] cursos: respuesta inesperada", res.status, data);
+  } catch (error) {
+    unstable_rethrow(error);
+    console.error("[odoo] cursos: no se pudo conectar", error);
+  }
+  return null;
+}
+
+/** Curso con sus secciones y contenidos, o `"not_found"` si el empleado no tiene acceso. */
+export async function odooGetCourse(token: string, id: number): Promise<CourseDetail | "not_found" | null> {
+  try {
+    const { res, data } = await odooFetch(`/tms/api/portal/courses/${id}`, { method: "GET", token });
+    if (res.ok && data?.ok) return data.course;
+    if (res.status === 404) return "not_found";
+    console.error("[odoo] curso: respuesta inesperada", res.status, data);
+  } catch (error) {
+    unstable_rethrow(error);
+    console.error("[odoo] curso: no se pudo conectar", error);
+  }
+  return null;
+}

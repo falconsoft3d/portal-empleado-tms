@@ -31,6 +31,9 @@
   }
 }
 
+/* Menú lateral oculto por el usuario (data-sidebar="hidden" en <html>). */
+@custom-variant sidebar-hidden (&:where([data-sidebar="hidden"], [data-sidebar="hidden"] *));
+
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
