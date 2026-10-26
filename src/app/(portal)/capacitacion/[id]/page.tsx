@@ -3,10 +3,23 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ChevronDownIcon, ChevronLeftIcon, PaperclipIcon, PlayCircleIcon } from "@/components/icons";
-import { odooGetCourse, type CourseContent, type CourseLink } from "@/lib/odoo";
+import {
+  CheckIcon,
+  ChevronDownIcon,
+  ChevronLeftIcon,
+  GraduationCapIcon,
+  LockIcon,
+  PaperclipIcon,
+  PlayCircleIcon,
+  PuzzleIcon,
+} from "@/components/icons";
+import { odooGetCourse, type CourseContent, type CourseDetail, type CourseLink } from "@/lib/odoo";
 import { getSession } from "@/lib/session";
 import { PortalHeader, PortalHeaderSkeleton } from "../../portal-header";
+import { ACTIVITY_TYPE_LABELS } from "../activity-types";
+import { CertificateCard } from "../certificate-card";
+import { CourseProgress } from "../course-progress";
+import { FinishContentButton } from "../finish-content-button";
 
 export const metadata: Metadata = {
   title: "Curso · Portal del Empleado",
@@ -77,6 +90,11 @@ async function CourseView({ params }: Pick<PageProps<"/capacitacion/[id]">, "par
                 {course.description && (
                   <p className="mt-2 whitespace-pre-line text-sm text-muted">{course.description}</p>
                 )}
+                {course.content_count > 0 && (
+                  <div className="mt-4 max-w-sm">
+                    <CourseProgress done={course.done_count} total={course.content_count} />
+                  </div>
+                )}
               </div>
             </div>
 
@@ -120,16 +138,62 @@ async function CourseView({ params }: Pick<PageProps<"/capacitacion/[id]">, "par
                 <ul>
                   {section.contents.map((content) => (
                     <li key={content.id} className="border-t border-line">
-                      <ContentRow content={content} number={++classNumber} />
+                      <ContentRow courseId={course.id} content={content} number={++classNumber} />
                     </li>
                   ))}
                 </ul>
               </details>
             ))}
+
+            <FinalExamSection course={course} />
           </>
         )}
       </main>
     </div>
+  );
+}
+
+function FinalExamSection({ course }: { course: CourseDetail }) {
+  const exam = course.final_exam;
+  if (!exam) return null;
+
+  return (
+    <section className="rounded-2xl border border-line bg-surface p-4 sm:p-6">
+      <div className="flex items-start gap-3">
+        <span
+          className={`grid size-10 shrink-0 place-items-center rounded-xl ${
+            exam.passed ? "bg-success-soft text-success" : "bg-accent-soft text-accent"
+          }`}
+        >
+          {exam.available ? <GraduationCapIcon className="size-5" /> : <LockIcon className="size-5" />}
+        </span>
+        <div className="min-w-0 flex-1">
+          <h2 className="font-semibold text-ink">{exam.name}</h2>
+          <p className="text-xs text-muted">
+            {exam.question_count} {exam.question_count === 1 ? "pregunta" : "preguntas"} · necesitas {exam.min_score}% para
+            aprobar y obtener tu certificado
+          </p>
+        </div>
+        {exam.passed && (
+          <span className="shrink-0 rounded-full bg-success-soft px-2 py-0.5 text-xs font-medium text-success">
+            Aprobado
+          </span>
+        )}
+      </div>
+
+      {!exam.available && (
+        <p className="mt-3 text-sm text-muted">Termina todos los contenidos del curso para habilitar el examen final.</p>
+      )}
+      {exam.available && !exam.passed && (
+        <Link
+          href={`/capacitacion/${course.id}/actividad/${exam.id}`}
+          className="mt-4 inline-flex h-10 items-center rounded-xl bg-primary px-5 text-sm font-medium text-white transition hover:bg-primary-hover"
+        >
+          Comenzar examen final
+        </Link>
+      )}
+      {course.certificate && <CertificateCard courseId={course.id} certificate={course.certificate} />}
+    </section>
   );
 }
 
@@ -150,27 +214,49 @@ function ShowButton({ link }: { link: CourseLink }) {
   );
 }
 
-function ContentRow({ content, number }: { content: CourseContent; number: number }) {
+function ContentRow({ courseId, content, number }: { courseId: number; content: CourseContent; number: number }) {
+  const rowClass = "flex items-center gap-3 px-4 py-3 sm:px-6";
+
+  if (content.locked) {
+    return (
+      <div className={`${rowClass} opacity-60`} title="Aprueba la actividad anterior para desbloquear este contenido">
+        <span className="grid h-7 min-w-9 shrink-0 place-items-center rounded-lg bg-surface-muted px-1.5 text-muted">
+          <LockIcon className="size-3.5" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm text-ink">{content.name}</span>
+          <span className="block text-xs text-muted">Aprueba la actividad anterior para desbloquearlo</span>
+        </span>
+      </div>
+    );
+  }
+
   const [firstLine] = content.lines;
-  const hasDetail = content.description || content.lines.length > 1 || content.annexes.length > 0;
-
-  const row = (
-    <>
-      <span className="grid h-7 min-w-9 shrink-0 place-items-center rounded-lg bg-surface-muted px-1.5 text-xs font-semibold text-muted">
-        C{number}
-      </span>
-      <span className="min-w-0 flex-1 text-sm text-ink">{content.name}</span>
-      {hasDetail && <ChevronDownIcon className="size-4 shrink-0 text-muted transition group-open/content:rotate-180" />}
-      {firstLine && <ShowButton link={firstLine} />}
-    </>
-  );
-  const rowClass = "flex items-center gap-3 px-4 py-3 transition hover:bg-success-soft sm:px-6";
-
-  if (!hasDetail) return <div className={rowClass}>{row}</div>;
+  const pendingActivities = content.activities.filter((activity) => !activity.passed).length;
 
   return (
     <details className="group/content">
-      <summary className={`${rowClass} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}>{row}</summary>
+      <summary
+        className={`${rowClass} cursor-pointer list-none transition hover:bg-success-soft [&::-webkit-details-marker]:hidden`}
+      >
+        <span
+          className={`grid h-7 min-w-9 shrink-0 place-items-center rounded-lg px-1.5 text-xs font-semibold ${
+            content.done ? "bg-success-soft text-success" : "bg-surface-muted text-muted"
+          }`}
+          title={content.done ? "Terminado" : undefined}
+        >
+          {content.done ? <CheckIcon className="size-4" /> : `C${number}`}
+        </span>
+        <span className="min-w-0 flex-1 text-sm text-ink">{content.name}</span>
+        {pendingActivities > 0 && (
+          <span className="hidden shrink-0 items-center gap-1 rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-ink sm:inline-flex">
+            <PuzzleIcon className="size-3.5" />
+            {pendingActivities === 1 ? "Actividad pendiente" : `${pendingActivities} actividades pendientes`}
+          </span>
+        )}
+        <ChevronDownIcon className="size-4 shrink-0 text-muted transition group-open/content:rotate-180" />
+        {firstLine && <ShowButton link={firstLine} />}
+      </summary>
 
       <div className="space-y-4 bg-canvas px-4 py-4 sm:px-6 sm:pl-[4.75rem]">
         {content.description && <p className="whitespace-pre-line text-sm text-muted">{content.description}</p>}
@@ -215,6 +301,52 @@ function ContentRow({ content, number }: { content: CourseContent; number: numbe
               })}
             </ul>
           </div>
+        )}
+
+        {content.activities.length > 0 && (
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted">Actividades</p>
+            <ul className="space-y-2">
+              {content.activities.map((activity) => (
+                <li
+                  key={activity.id}
+                  className="flex items-center gap-3 rounded-xl border border-line bg-surface px-3 py-2.5"
+                >
+                  <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-accent-soft text-accent">
+                    <PuzzleIcon className="size-4" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-medium text-ink">{activity.name}</span>
+                    <span className="block text-xs text-muted">{ACTIVITY_TYPE_LABELS[activity.type]}</span>
+                  </span>
+                  {activity.passed && (
+                    <span className="hidden shrink-0 rounded-full bg-success-soft px-2 py-0.5 text-xs font-medium text-success sm:inline">
+                      Aprobada
+                    </span>
+                  )}
+                  <Link
+                    href={`/capacitacion/${courseId}/actividad/${activity.id}`}
+                    className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                      activity.passed
+                        ? "border border-line bg-surface-muted text-ink hover:border-accent hover:text-accent"
+                        : "bg-primary text-white hover:bg-primary-hover"
+                    }`}
+                  >
+                    {activity.passed ? "Repetir" : "Realizar"}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {content.done ? (
+          <p className="inline-flex items-center gap-2 rounded-full bg-success-soft px-3 py-1.5 text-sm font-medium text-success">
+            <CheckIcon className="size-4" />
+            Terminado
+          </p>
+        ) : (
+          <FinishContentButton contentId={content.id} pendingActivities={pendingActivities > 0} />
         )}
       </div>
     </details>

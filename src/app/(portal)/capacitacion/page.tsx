@@ -7,6 +7,7 @@ import { ArrowRightIcon, GraduationCapIcon } from "@/components/icons";
 import { odooGetCourses, type Course } from "@/lib/odoo";
 import { getSession } from "@/lib/session";
 import { PortalHeader, PortalHeaderSkeleton } from "../portal-header";
+import { CourseProgress } from "./course-progress";
 
 export const metadata: Metadata = {
   title: "Capacitación · Portal del Empleado",
@@ -108,6 +109,11 @@ async function Training() {
                         </span>
                         {course.description && (
                           <span className="mt-3 line-clamp-3 text-sm text-muted">{course.description}</span>
+                        )}
+                        {course.content_count > 0 && (
+                          <span className="mt-auto block pt-4">
+                            <CourseProgress done={course.done_count} total={course.content_count} />
+                          </span>
                         )}
                       </span>
                     </Link>

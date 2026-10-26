@@ -278,12 +278,20 @@ export async function odooGetResources(token: string): Promise<Resource[] | null
 
 export type CourseLink = { id: number; name: string; url: string };
 
+export type ActivityType = "examen" | "completar" | "imagen" | "verdadero_falso" | "ordenar" | "relacionar";
+
+export type CourseActivity = { id: number; name: string; type: ActivityType; passed: boolean };
+
+/** Contenido de una sección. Si está bloqueado (actividad anterior sin aprobar) solo trae el nombre. */
 export type CourseContent = {
   id: number;
   name: string;
   description: string;
+  locked: boolean;
+  done: boolean;
   lines: CourseLink[];
   annexes: CourseLink[];
+  activities: CourseActivity[];
 };
 
 export type CourseSection = { id: number; name: string; description: string; contents: CourseContent[] };
@@ -297,9 +305,35 @@ export type Course = {
   has_image: boolean;
   section_count: number;
   content_count: number;
+  /** Contenidos que el empleado marcó como terminados. */
+  done_count: number;
 };
 
-export type CourseDetail = Course & { sections: CourseSection[] };
+/** Examen final: se habilita (`available`) al terminar todos los contenidos del curso. */
+export type FinalExam = {
+  id: number;
+  name: string;
+  min_score: number;
+  question_count: number;
+  available: boolean;
+  passed: boolean;
+};
+
+/** Certificado emitido al aprobar el examen final; se descarga con la firma del empleado y del profesor. */
+export type Certificate = {
+  number: string;
+  date: string;
+  score: number;
+  signed: boolean;
+  teacher_signed: boolean;
+  downloadable: boolean;
+};
+
+export type CourseDetail = Course & {
+  sections: CourseSection[];
+  final_exam: FinalExam | null;
+  certificate: Certificate | null;
+};
 
 /** Cursos visibles para el empleado: los de sus carreras y aquellos en los que está inscrito. */
 export async function odooGetCourses(token: string): Promise<Course[] | null> {
@@ -324,6 +358,144 @@ export async function odooGetCourse(token: string, id: number): Promise<CourseDe
   } catch (error) {
     unstable_rethrow(error);
     console.error("[odoo] curso: no se pudo conectar", error);
+  }
+  return null;
+}
+
+export type ContentFinishError = "unauthorized" | "not_found" | "activities_pending" | "unavailable";
+
+/** Marca un contenido como terminado; Odoo lo rechaza si tiene actividades sin aprobar. */
+export async function odooFinishContent(
+  token: string,
+  contentId: number,
+): Promise<{ ok: true } | { ok: false; error: ContentFinishError }> {
+  try {
+    const { res, data } = await odooFetch(`/tms/api/portal/contents/${contentId}/finish`, { method: "POST", token });
+    if (res.ok && data?.ok) return { ok: true };
+    if (res.status === 401) return { ok: false, error: "unauthorized" };
+    if (res.status === 404) return { ok: false, error: "not_found" };
+    if (res.status === 409) return { ok: false, error: "activities_pending" };
+    console.error("[odoo] terminar contenido: respuesta inesperada", res.status, data);
+  } catch (error) {
+    unstable_rethrow(error);
+    console.error("[odoo] terminar contenido: no se pudo conectar", error);
+  }
+  return { ok: false, error: "unavailable" };
+}
+
+/**
+ * Actividad para realizar. `questions` trae el enunciado (y las 3 opciones si es examen);
+ * en "ordenar" vienen mezcladas y en "relacionar" `pairs` son las parejas mezcladas.
+ */
+export type ActivityDetail = {
+  id: number;
+  name: string;
+  type: ActivityType;
+  instructions: string;
+  min_score: number;
+  passed: boolean;
+  /** Examen final del curso (no pertenece a un contenido). */
+  final: boolean;
+  content: { id: number; name: string } | null;
+  course_id: number;
+  questions: { id: number; text: string; options: string[] }[];
+  pairs: { id: number; text: string }[];
+};
+
+/** Respuestas por id de pregunta: opción "1"-"3", texto, verdadero/falso, posición (ordenar) o id de pareja. */
+export type ActivityAnswers = Record<string, string | number | boolean>;
+
+export type ActivityResult = { score: number; passed: boolean; min_score: number; results: Record<string, boolean> };
+
+export type ActivitySubmitError = "unauthorized" | "not_found" | "invalid_data" | "unavailable";
+
+export async function odooGetActivity(token: string, id: number): Promise<ActivityDetail | "not_found" | null> {
+  try {
+    const { res, data } = await odooFetch(`/tms/api/portal/activities/${id}`, { method: "GET", token });
+    if (res.ok && data?.ok) return data.activity;
+    if (res.status === 404) return "not_found";
+    console.error("[odoo] actividad: respuesta inesperada", res.status, data);
+  } catch (error) {
+    unstable_rethrow(error);
+    console.error("[odoo] actividad: no se pudo conectar", error);
+  }
+  return null;
+}
+
+/** Envía las respuestas; Odoo corrige, guarda el intento y dice qué preguntas se acertaron. */
+export async function odooSubmitActivity(
+  token: string,
+  id: number,
+  answers: ActivityAnswers,
+): Promise<{ ok: true; result: ActivityResult } | { ok: false; error: ActivitySubmitError }> {
+  try {
+    const { res, data } = await odooFetch(`/tms/api/portal/activities/${id}/submit`, {
+      method: "POST",
+      token,
+      body: JSON.stringify({ answers }),
+    });
+    if (res.ok && data?.ok) return { ok: true, result: data.result };
+    if (res.status === 401) return { ok: false, error: "unauthorized" };
+    if (res.status === 404) return { ok: false, error: "not_found" };
+    if (res.status === 400) return { ok: false, error: "invalid_data" };
+    console.error("[odoo] enviar actividad: respuesta inesperada", res.status, data);
+  } catch (error) {
+    unstable_rethrow(error);
+    console.error("[odoo] enviar actividad: no se pudo conectar", error);
+  }
+  return { ok: false, error: "unavailable" };
+}
+
+export type CertificateSignError = "unauthorized" | "not_found" | "already_signed" | "invalid_signature" | "unavailable";
+
+/** Firma el certificado del curso con la firma dibujada en el portal (PNG en base64, sin el prefijo data:). */
+export async function odooSignCertificate(
+  token: string,
+  courseId: number,
+  signature: string,
+): Promise<{ ok: true; certificate: Certificate } | { ok: false; error: CertificateSignError }> {
+  try {
+    const { res, data } = await odooFetch(`/tms/api/portal/courses/${courseId}/certificate/sign`, {
+      method: "POST",
+      token,
+      body: JSON.stringify({ signature }),
+    });
+    if (res.ok && data?.ok) return { ok: true, certificate: data.certificate };
+    if (res.status === 401) return { ok: false, error: "unauthorized" };
+    if (res.status === 404) return { ok: false, error: "not_found" };
+    if (res.status === 409) return { ok: false, error: "already_signed" };
+    if (res.status === 400) return { ok: false, error: "invalid_signature" };
+    console.error("[odoo] firmar certificado: respuesta inesperada", res.status, data);
+  } catch (error) {
+    unstable_rethrow(error);
+    console.error("[odoo] firmar certificado: no se pudo conectar", error);
+  }
+  return { ok: false, error: "unavailable" };
+}
+
+export type VerifiedCertificate = {
+  number: string;
+  employee: string;
+  course: string;
+  career: string;
+  teacher: string;
+  company: string;
+  date: string;
+  score: number;
+};
+
+/** Verificación pública del QR del certificado (no requiere sesión). */
+export async function odooVerifyCertificate(code: string): Promise<VerifiedCertificate | "not_found" | null> {
+  try {
+    const { res, data } = await odooFetch(`/tms/api/portal/certificates/${encodeURIComponent(code)}/verify`, {
+      method: "GET",
+    });
+    if (res.ok && data?.ok) return data.certificate;
+    if (res.status === 404) return "not_found";
+    console.error("[odoo] verificar certificado: respuesta inesperada", res.status, data);
+  } catch (error) {
+    unstable_rethrow(error);
+    console.error("[odoo] verificar certificado: no se pudo conectar", error);
   }
   return null;
 }

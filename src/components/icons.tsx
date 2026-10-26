@@ -158,3 +158,27 @@ export const ChevronLeftIcon = (p: IconProps) => (
     <path d="m15 6-6 6 6 6" />
   </Icon>
 );
+
+export const PuzzleIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M10 4a2 2 0 0 1 4 0v2h4a1 1 0 0 1 1 1v4h-2a2 2 0 0 0 0 4h2v4a1 1 0 0 1-1 1h-4v-2a2 2 0 0 0-4 0v2H6a1 1 0 0 1-1-1v-4h2a2 2 0 0 0 0-4H5V7a1 1 0 0 1 1-1h4z" />
+  </Icon>
+);
+
+export const ArrowUpIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M12 19V5M6 11l6-6 6 6" />
+  </Icon>
+);
+
+export const ArrowDownIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M12 5v14M6 13l6 6 6-6" />
+  </Icon>
+);
+
+export const XIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M6 6l12 12M18 6 6 18" />
+  </Icon>
+);
