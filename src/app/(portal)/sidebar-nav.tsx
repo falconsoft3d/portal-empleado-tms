@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { DashboardIcon, GraduationCapIcon, UserIcon } from "@/components/icons";
@@ -11,14 +12,29 @@ const ITEMS = [
 ] as const;
 
 /** La ruta raíz solo se marca activa en sí misma; el resto también en sus subpáginas. */
-function isActive(pathname: string, href: string) {
+function isActive(pathname: string | null, href: string) {
+  if (pathname === null) return false;
   return href === "/" ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
 }
 
-/** Menú del portal: barra lateral en escritorio y barra de pestañas inferior en móvil. */
+/**
+ * Menú del portal: barra lateral en escritorio y barra de pestañas inferior en móvil.
+ * `usePathname` se suspende al prerenderizar rutas con parámetros dinámicos (p. ej. /capacitacion/[id]),
+ * así que mientras tanto se muestra el mismo menú sin ítem activo.
+ */
 export function SidebarNav() {
-  const pathname = usePathname();
+  return (
+    <Suspense fallback={<Nav pathname={null} />}>
+      <ActiveNav />
+    </Suspense>
+  );
+}
 
+function ActiveNav() {
+  return <Nav pathname={usePathname()} />;
+}
+
+function Nav({ pathname }: { pathname: string | null }) {
   return (
     <>
       <nav
