@@ -3,12 +3,14 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarIcon, DashboardIcon, GraduationCapIcon, UserIcon } from "@/components/icons";
+import { CalendarIcon, DashboardIcon, GraduationCapIcon, TicketIcon, UserIcon, UserXIcon } from "@/components/icons";
 
 const ITEMS = [
   { href: "/", label: "Dashboard", Icon: DashboardIcon },
   { href: "/capacitacion", label: "Capacitación", Icon: GraduationCapIcon },
   { href: "/vacaciones", label: "Vacaciones", Icon: CalendarIcon },
+  { href: "/ausencias", label: "Ausencias", Icon: UserXIcon },
+  { href: "/tickets", label: "Tickets", Icon: TicketIcon },
   { href: "/perfil", label: "Perfil", Icon: UserIcon },
 ] as const;
 
@@ -66,7 +68,7 @@ function Nav({ pathname }: { pathname: string | null }) {
 
       <nav
         aria-label="Menú principal"
-        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-line bg-surface/95 backdrop-blur lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-6 border-t border-line bg-surface/95 backdrop-blur lg:hidden"
       >
         {ITEMS.map(({ href, label, Icon }) => {
           const active = isActive(pathname, href);
@@ -75,12 +77,12 @@ function Nav({ pathname }: { pathname: string | null }) {
               key={href}
               href={href}
               aria-current={active ? "page" : undefined}
-              className={`flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium ${
+              className={`flex min-w-0 flex-col items-center gap-1 px-0.5 py-2.5 text-[10px] font-medium sm:text-[11px] ${
                 active ? "text-accent" : "text-muted"
               }`}
             >
               <Icon className="size-5" />
-              {label}
+              <span className="max-w-full truncate">{label}</span>
             </Link>
           );
         })}

@@ -189,3 +189,17 @@ export const CalendarIcon = (p: IconProps) => (
     <path d="M3 10h18M8 3v4M16 3v4" />
   </Icon>
 );
+
+export const UserXIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx="9" cy="8" r="4" />
+    <path d="M2 21a7 7 0 0 1 14 0M17 8l4 4M21 8l-4 4" />
+  </Icon>
+);
+
+export const TicketIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M3 8a2 2 0 0 0 2-2h14a2 2 0 0 0 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 0-2 2H5a2 2 0 0 0-2-2v-2a2 2 0 0 0 0-4Z" />
+    <path d="M9 10h6M9 14h4" />
+  </Icon>
+);

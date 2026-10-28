@@ -5,7 +5,7 @@ import { CheckIcon, SpinnerIcon } from "@/components/icons";
 import type { VacationRequestState, Vacations as VacationsData } from "@/lib/odoo";
 import { solicitarVacaciones } from "./actions";
 
-const inputClass =
+export const inputClass =
   "mt-1 h-10 w-full rounded-xl border border-line bg-surface px-3 text-sm text-ink outline-none focus:border-accent focus:ring-4 focus:ring-accent/15";
 
 const STEPS: { state: VacationRequestState; label: string }[] = [
@@ -20,18 +20,18 @@ const STATE_BADGES: Record<VacationRequestState, { label: string; className: str
   aprobado: { label: "Aprobado", className: "bg-success-soft text-success" },
 };
 
-function formatDate(iso: string) {
+export function formatDate(iso: string) {
   const [year, month, day] = iso.split("-");
   return `${day}/${month}/${year}`;
 }
 
-function formatDays(days: number) {
+export function formatDays(days: number) {
   const value = Number.isInteger(days) ? String(days) : days.toFixed(1).replace(".", ",");
   return `${value} ${days === 1 ? "día" : "días"}`;
 }
 
 /** Días corridos entre dos fechas ISO, ambas incluidas (0 si el rango no es válido). */
-function daysBetween(start: string, end: string) {
+export function daysBetween(start: string, end: string) {
   if (!start || !end || end < start) return 0;
   return Math.round((Date.parse(end) - Date.parse(start)) / 86_400_000) + 1;
 }
@@ -42,7 +42,7 @@ function localToday() {
 }
 
 /** Seguimiento de la solicitud: Borrador → Solicitado → Aprobado. */
-function Progress({ state }: { state: VacationRequestState }) {
+export function Progress({ state }: { state: VacationRequestState }) {
   const current = STEPS.findIndex((step) => step.state === state);
   return (
     <ol className="mt-3 flex items-center gap-2" aria-label="Seguimiento">

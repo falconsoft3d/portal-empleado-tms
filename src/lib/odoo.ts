@@ -575,3 +575,114 @@ export function odooGetVacations(token: string) {
 export function odooCreateVacationRequest(token: string, request: NewVacationRequest) {
   return vacationRequest(token, { method: "POST", body: JSON.stringify(request) });
 }
+
+export type AbsenceRequestState = VacationRequestState;
+
+export type AbsenceRequest = {
+  id: number;
+  name: string;
+  type: string;
+  start: string;
+  end: string;
+  days: number;
+  description: string;
+  /** Nombres de los archivos adjuntos. */
+  attachments: string[];
+  state: AbsenceRequestState;
+};
+
+/** Tipos de ausencia (conceptos marcados como Ausencia en Odoo) y solicitudes del empleado. */
+export type Absences = { types: { id: number; name: string }[]; requests: AbsenceRequest[] };
+
+export type AbsenceRequestError =
+  | "unauthorized"
+  | "invalid_type"
+  | "invalid_dates"
+  | "invalid_attachment"
+  | "overlap"
+  | "unavailable";
+
+/** Adjunto en base64 (PDF o imagen). */
+export type AbsenceAttachment = { nombre: string; datos: string };
+
+export type NewAbsenceRequest = {
+  concepto_id: number;
+  fecha_desde: string;
+  fecha_hasta: string;
+  descripcion: string;
+  adjuntos: AbsenceAttachment[];
+};
+
+async function absenceRequest(
+  token: string,
+  init: RequestInit,
+): Promise<{ ok: true; data: Absences } | { ok: false; error: AbsenceRequestError }> {
+  try {
+    const { res, data } = await odooFetch("/tms/api/portal/absences", { ...init, token });
+    if (res.ok && data?.ok) return { ok: true, data: data.data };
+    if (res.status === 401) return { ok: false, error: "unauthorized" };
+    if (
+      (res.status === 400 || res.status === 409) &&
+      ["invalid_type", "invalid_dates", "invalid_attachment", "overlap"].includes(data?.error)
+    ) {
+      return { ok: false, error: data.error };
+    }
+    console.error("[odoo] ausencias: respuesta inesperada", res.status, data);
+  } catch (error) {
+    unstable_rethrow(error);
+    console.error("[odoo] ausencias: no se pudo conectar", error);
+  }
+  return { ok: false, error: "unavailable" };
+}
+
+export function odooGetAbsences(token: string) {
+  return absenceRequest(token, { method: "GET" });
+}
+
+export function odooCreateAbsenceRequest(token: string, request: NewAbsenceRequest) {
+  return absenceRequest(token, { method: "POST", body: JSON.stringify(request) });
+}
+
+export type TicketState = "nuevo" | "en_proceso" | "resuelto" | "cancelado";
+
+/** Ticket del empleado a RRHH; `answer` es la respuesta que se carga en Odoo. */
+export type Ticket = {
+  id: number;
+  name: string;
+  title: string;
+  description: string;
+  answer: string;
+  date: string;
+  state: TicketState;
+};
+
+export type Tickets = { tickets: Ticket[] };
+
+export type TicketError = "unauthorized" | "missing_title" | "unavailable";
+
+export type NewTicket = { titulo: string; descripcion: string };
+
+async function ticketRequest(
+  token: string,
+  init: RequestInit,
+): Promise<{ ok: true; data: Tickets } | { ok: false; error: TicketError }> {
+  try {
+    const { res, data } = await odooFetch("/tms/api/portal/tickets", { ...init, token });
+    if (res.ok && data?.ok) return { ok: true, data: data.data };
+    if (res.status === 401) return { ok: false, error: "unauthorized" };
+    if (res.status === 400 && data?.error === "missing_title") return { ok: false, error: "missing_title" };
+    console.error("[odoo] tickets: respuesta inesperada", res.status, data);
+  } catch (error) {
+    unstable_rethrow(error);
+    console.error("[odoo] tickets: no se pudo conectar", error);
+  }
+  return { ok: false, error: "unavailable" };
+}
+
+export function odooGetTickets(token: string) {
+  return ticketRequest(token, { method: "GET" });
+}
+
+export function odooCreateTicket(token: string, ticket: NewTicket) {
+  return ticketRequest(token, { method: "POST", body: JSON.stringify(ticket) });
+}
