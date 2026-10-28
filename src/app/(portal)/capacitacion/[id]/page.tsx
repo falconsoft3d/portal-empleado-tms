@@ -43,6 +43,21 @@ function safeUrl(url: string) {
   }
 }
 
+/**
+ * URL del reproductor incrustable de un archivo de Google Drive (`/file/d/<id>/view`,
+ * `open?id=<id>` o `uc?id=<id>`), o `null` si el enlace no es de Drive.
+ */
+function driveEmbedUrl(url: string) {
+  try {
+    const parsed = new URL(url);
+    if (parsed.hostname !== "drive.google.com") return null;
+    const fileId = parsed.pathname.match(/^\/file\/d\/([\w-]+)/)?.[1] ?? parsed.searchParams.get("id");
+    return fileId && /^[\w-]+$/.test(fileId) ? `https://drive.google.com/file/d/${fileId}/preview` : null;
+  } catch {
+    return null;
+  }
+}
+
 async function CourseView({ params }: Pick<PageProps<"/capacitacion/[id]">, "params">) {
   const session = await getSession();
   if (!session) redirect("/login");
@@ -197,20 +212,42 @@ function FinalExamSection({ course }: { course: CourseDetail }) {
   );
 }
 
+const SHOW_BUTTON_CLASS =
+  "inline-flex shrink-0 items-center gap-1.5 rounded-full border border-line bg-surface-muted px-3 py-1.5 text-xs font-semibold text-ink transition hover:border-accent hover:text-accent";
+
 function ShowButton({ link }: { link: CourseLink }) {
+  // Los videos de Drive se ven dentro del contenido: el botón solo lo despliega (clic en el summary).
+  if (driveEmbedUrl(link.url)) {
+    return (
+      <span title={link.name} className={SHOW_BUTTON_CLASS}>
+        <PlayCircleIcon className="size-4" />
+        Mostrar
+      </span>
+    );
+  }
   const href = safeUrl(link.url);
   if (!href) return null;
   return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      title={link.name}
-      className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-line bg-surface-muted px-3 py-1.5 text-xs font-semibold text-ink transition hover:border-accent hover:text-accent"
-    >
+    <a href={href} target="_blank" rel="noopener noreferrer" title={link.name} className={SHOW_BUTTON_CLASS}>
       <PlayCircleIcon className="size-4" />
       Mostrar
     </a>
+  );
+}
+
+function DriveVideo({ link, src, showName }: { link: CourseLink; src: string; showName: boolean }) {
+  return (
+    <figure className="space-y-2">
+      {showName && <figcaption className="text-sm font-medium text-ink">{link.name}</figcaption>}
+      <iframe
+        src={src}
+        title={link.name}
+        allow="autoplay; fullscreen"
+        allowFullScreen
+        loading="lazy"
+        className="aspect-video w-full rounded-xl border border-line bg-black"
+      />
+    </figure>
   );
 }
 
@@ -232,6 +269,11 @@ function ContentRow({ courseId, content, number }: { courseId: number; content: 
   }
 
   const [firstLine] = content.lines;
+  const videos = content.lines.flatMap((line) => {
+    const src = driveEmbedUrl(line.url);
+    return src ? [{ line, src }] : [];
+  });
+  const otherLines = content.lines.filter((line) => !driveEmbedUrl(line.url));
   const pendingActivities = content.activities.filter((activity) => !activity.passed).length;
 
   return (
@@ -261,9 +303,13 @@ function ContentRow({ courseId, content, number }: { courseId: number; content: 
       <div className="space-y-4 bg-canvas px-4 py-4 sm:px-6 sm:pl-[4.75rem]">
         {content.description && <p className="whitespace-pre-line text-sm text-muted">{content.description}</p>}
 
-        {content.lines.length > 1 && (
+        {videos.map(({ line, src }) => (
+          <DriveVideo key={line.id} link={line} src={src} showName={content.lines.length > 1} />
+        ))}
+
+        {content.lines.length > 1 && otherLines.length > 0 && (
           <ul className="space-y-2">
-            {content.lines.map((line) => (
+            {otherLines.map((line) => (
               <li key={line.id} className="flex items-center gap-3">
                 <span className="min-w-0 flex-1 text-sm text-ink">{line.name}</span>
                 <ShowButton link={line} />
