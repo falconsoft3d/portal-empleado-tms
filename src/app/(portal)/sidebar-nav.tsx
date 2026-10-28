@@ -3,11 +3,12 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { DashboardIcon, GraduationCapIcon, UserIcon } from "@/components/icons";
+import { CalendarIcon, DashboardIcon, GraduationCapIcon, UserIcon } from "@/components/icons";
 
 const ITEMS = [
   { href: "/", label: "Dashboard", Icon: DashboardIcon },
   { href: "/capacitacion", label: "Capacitación", Icon: GraduationCapIcon },
+  { href: "/vacaciones", label: "Vacaciones", Icon: CalendarIcon },
   { href: "/perfil", label: "Perfil", Icon: UserIcon },
 ] as const;
 
@@ -65,7 +66,7 @@ function Nav({ pathname }: { pathname: string | null }) {
 
       <nav
         aria-label="Menú principal"
-        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-3 border-t border-line bg-surface/95 backdrop-blur lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-line bg-surface/95 backdrop-blur lg:hidden"
       >
         {ITEMS.map(({ href, label, Icon }) => {
           const active = isActive(pathname, href);

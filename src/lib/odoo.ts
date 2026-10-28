@@ -109,6 +109,26 @@ export async function odooPortalLogin(username: string, password: string): Promi
   return { ok: false, error: "unavailable" };
 }
 
+/** Canjea el ticket de autologin que genera Odoo (menú «Portal Empleado») por el token del empleado. */
+export async function odooPortalSso(ticket: string): Promise<LoginResult> {
+  try {
+    const { res, data } = await odooFetch("/tms/api/portal/sso", {
+      method: "POST",
+      body: JSON.stringify({ ticket }),
+    });
+    if (res.ok && data?.ok) return { ok: true, employee: data.employee, token: data.token };
+    if (res.status === 401 && data?.error === "invalid_ticket") {
+      return { ok: false, error: "invalid_credentials" };
+    }
+    console.error("[odoo] sso: respuesta inesperada", res.status, data);
+  } catch (error) {
+    // Errores internos de Next (p. ej. fin del prerender) no se deben tragar.
+    unstable_rethrow(error);
+    console.error("[odoo] sso: no se pudo conectar", error);
+  }
+  return { ok: false, error: "unavailable" };
+}
+
 async function attendanceRequest(path: string, token: string, init: RequestInit): Promise<AttendanceResult> {
   try {
     const { res, data } = await odooFetch(path, { ...init, token });
@@ -498,4 +518,60 @@ export async function odooVerifyCertificate(code: string): Promise<VerifiedCerti
     console.error("[odoo] verificar certificado: no se pudo conectar", error);
   }
   return null;
+}
+
+export type VacationRequestState = "borrador" | "solicitado" | "aprobado";
+
+export type VacationRequest = {
+  id: number;
+  name: string;
+  start: string;
+  end: string;
+  days: number;
+  description: string;
+  state: VacationRequestState;
+};
+
+/** Año de vacaciones del empleado: días que le corresponden, saldo del período anterior, tomados y los que restan. */
+export type VacationPeriod = {
+  id: number;
+  year: number;
+  entitled: number;
+  previous: number;
+  taken: number;
+  remaining: number;
+};
+
+/** Días disponibles (suma de lo que resta en todos los años: lo no tomado se acumula), años y solicitudes. */
+export type Vacations = { available: number; periods: VacationPeriod[]; requests: VacationRequest[] };
+
+export type VacationRequestError = "unauthorized" | "invalid_dates" | "past_dates" | "overlap" | "unavailable";
+
+export type NewVacationRequest = { fecha_desde: string; fecha_hasta: string; descripcion: string };
+
+async function vacationRequest(
+  token: string,
+  init: RequestInit,
+): Promise<{ ok: true; data: Vacations } | { ok: false; error: VacationRequestError }> {
+  try {
+    const { res, data } = await odooFetch("/tms/api/portal/vacations", { ...init, token });
+    if (res.ok && data?.ok) return { ok: true, data: data.data };
+    if (res.status === 401) return { ok: false, error: "unauthorized" };
+    if ((res.status === 400 || res.status === 409) && ["invalid_dates", "past_dates", "overlap"].includes(data?.error)) {
+      return { ok: false, error: data.error };
+    }
+    console.error("[odoo] vacaciones: respuesta inesperada", res.status, data);
+  } catch (error) {
+    unstable_rethrow(error);
+    console.error("[odoo] vacaciones: no se pudo conectar", error);
+  }
+  return { ok: false, error: "unavailable" };
+}
+
+export function odooGetVacations(token: string) {
+  return vacationRequest(token, { method: "GET" });
+}
+
+export function odooCreateVacationRequest(token: string, request: NewVacationRequest) {
+  return vacationRequest(token, { method: "POST", body: JSON.stringify(request) });
 }
