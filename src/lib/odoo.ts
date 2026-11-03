@@ -829,3 +829,31 @@ export function odooMaintenanceState(token: string, id: number, action: "repair"
     body: JSON.stringify({ action }),
   });
 }
+
+export type Payslip = {
+  id: number;
+  number: string;
+  name: string;
+  /** "Julio 2026" o el rango de fechas si el recibo no es mensual. */
+  period: string;
+  date_from: string | null;
+  date_to: string | null;
+  net: number;
+  currency: string;
+  company: string;
+  state: "validated" | "paid";
+  paid: boolean;
+};
+
+/** Recibos de sueldo validados o pagados del empleado (los más recientes primero). */
+export async function odooGetPayslips(token: string): Promise<Payslip[] | null> {
+  try {
+    const { res, data } = await odooFetch("/tms/api/portal/payslips", { method: "GET", token });
+    if (res.ok && data?.ok) return data.payslips;
+    console.error("[odoo] recibos: respuesta inesperada", res.status, data);
+  } catch (error) {
+    unstable_rethrow(error);
+    console.error("[odoo] recibos: no se pudo conectar", error);
+  }
+  return null;
+}

@@ -7,6 +7,7 @@ import {
   CalendarIcon,
   DashboardIcon,
   GraduationCapIcon,
+  ReceiptIcon,
   TicketIcon,
   UserIcon,
   UserXIcon,
@@ -26,6 +27,7 @@ const ITEMS: NavItem[] = [
   { href: "/capacitacion", label: "Capacitación", Icon: GraduationCapIcon },
   { href: "/vacaciones", label: "Vacaciones", Icon: CalendarIcon },
   { href: "/ausencias", label: "Ausencias", Icon: UserXIcon },
+  { href: "/recibos", label: "Recibos de sueldo", shortLabel: "Recibos", Icon: ReceiptIcon },
   { href: "/tickets", label: "Tickets", Icon: TicketIcon },
   { href: "/perfil", label: "Perfil", Icon: UserIcon },
 ];
@@ -36,6 +38,9 @@ const MAINTENANCE_ITEM: NavItem = { href: "/mantenimiento", label: "Mantenimient
 function navItems(maintenance: boolean) {
   return maintenance ? [...ITEMS.slice(0, -1), MAINTENANCE_ITEM, ...ITEMS.slice(-1)] : ITEMS;
 }
+
+/** Columnas de la barra inferior en móvil (clases literales para Tailwind). */
+const MOBILE_COLS: Record<number, string> = { 6: "grid-cols-6", 7: "grid-cols-7", 8: "grid-cols-8" };
 
 /** La ruta raíz solo se marca activa en sí misma; el resto también en sus subpáginas. */
 function isActive(pathname: string | null, href: string) {
@@ -94,7 +99,7 @@ function Nav({ items, pathname }: { items: NavItem[]; pathname: string | null })
       <nav
         aria-label="Menú principal"
         className={`fixed inset-x-0 bottom-0 z-40 grid border-t border-line bg-surface/95 backdrop-blur lg:hidden ${
-          items.length > 6 ? "grid-cols-7" : "grid-cols-6"
+          MOBILE_COLS[items.length] ?? "grid-cols-8"
         }`}
       >
         {items.map(({ href, label, shortLabel, Icon }) => {

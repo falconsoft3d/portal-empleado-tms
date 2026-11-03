@@ -218,6 +218,21 @@ export const PrinterIcon = (p: IconProps) => (
   </Icon>
 );
 
+export const ReceiptIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M6 2h12v20l-3-2-3 2-3-2-3 2z" />
+    <path d="M9 7h6M9 11h6M9 15h4" />
+  </Icon>
+);
+
+export const DownloadIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M12 3v12" />
+    <path d="m7 10 5 5 5-5" />
+    <path d="M5 21h14" />
+  </Icon>
+);
+
 export const StopIcon = (p: IconProps) => (
   <Icon {...p}>
     <rect x="6" y="6" width="12" height="12" rx="1.5" />
