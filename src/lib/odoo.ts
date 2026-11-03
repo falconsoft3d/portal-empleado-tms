@@ -7,6 +7,8 @@ export type OdooEmployee = {
   department: string;
   company: string;
   work_email: string;
+  /** Responsable de Mantenimiento: ve la sección Mantenimiento (Fichas Mecánicas). */
+  responsable_mantenimiento?: boolean;
 };
 
 export type LoginResult =
@@ -220,12 +222,12 @@ export async function odooGetNews(token: string): Promise<NewsItem[] | null> {
   return null;
 }
 
-/** Archivo binario de Odoo (imágenes) pedido con el token del empleado, o null si no existe. */
-export async function odooGetBinary(token: string, path: string): Promise<Response | null> {
+/** Archivo binario de Odoo (imágenes, PDF) pedido con el token del empleado, o null si no existe. */
+export async function odooGetBinary(token: string, path: string, timeoutMs = 10_000): Promise<Response | null> {
   try {
     const res = await fetch(odooUrl(path), {
       headers: odooHeaders(token),
-      signal: AbortSignal.timeout(10_000),
+      signal: AbortSignal.timeout(timeoutMs),
     });
     return res.ok ? res : null;
   } catch (error) {
@@ -685,4 +687,145 @@ export function odooGetTickets(token: string) {
 
 export function odooCreateTicket(token: string, ticket: NewTicket) {
   return ticketRequest(token, { method: "POST", body: JSON.stringify(ticket) });
+}
+
+/** Datos del empleado con sesión (los mismos que devuelve el login). */
+export async function odooGetMe(token: string): Promise<OdooEmployee | null> {
+  try {
+    const { res, data } = await odooFetch("/tms/api/portal/me", { method: "GET", token });
+    if (res.ok && data?.ok) return data.employee;
+    if (res.status !== 401) console.error("[odoo] me: respuesta inesperada", res.status, data);
+  } catch (error) {
+    unstable_rethrow(error);
+    console.error("[odoo] me: no se pudo conectar", error);
+  }
+  return null;
+}
+
+/** Ficha Mecánica (resumen). Fechas ISO con zona horaria. */
+export type MaintenanceOrder = {
+  id: number;
+  name: string;
+  /** open, repair (activas) · finalized, audit, closed, rated (historial). */
+  state: string;
+  state_label: string;
+  vehicle: string;
+  license_plate: string;
+  record_type: string;
+  date_open: string | null;
+  date_close: string | null;
+  category: string;
+  repair_types: string[];
+  description: string;
+  tasks_total: number;
+  tasks_done: number;
+  tasks_pending: number;
+};
+
+export type MaintenanceLine = {
+  id: number;
+  task: string;
+  is_pending: boolean;
+  is_done: boolean;
+  employee_id: number | null;
+  employee_name: string;
+  start: string | null;
+  end: string | null;
+  hours: number;
+};
+
+export type MaintenanceOrderDetail = MaintenanceOrder & {
+  odometer: number;
+  driver: string;
+  notes: string;
+  productos_cargados: boolean;
+  /** Alguna tarea se realizó hace menos días que su Tiempo de Control. */
+  control_warning: boolean;
+  /** Abierta o En Reparación: se puede trabajar desde el portal. */
+  editable: boolean;
+  can_repair: boolean;
+  can_finalize: boolean;
+  lines: MaintenanceLine[];
+  /** Empleados asignables a las tareas (vacío si la ficha no es editable). */
+  employees: { id: number; name: string }[];
+};
+
+/** Fichas donde el empleado es Responsable: activas (Abierta / En Reparación) e historial. */
+export type Maintenance = { active: MaintenanceOrder[]; history: MaintenanceOrder[] };
+
+/** Cambios de una tarea: solo se envían las claves modificadas. */
+export type MaintenanceLineChange = {
+  id: number;
+  is_pending?: boolean;
+  is_done?: boolean;
+  employee_id?: number | null;
+  start?: string | null;
+  end?: string | null;
+};
+
+export type MaintenanceChanges = { lines?: MaintenanceLineChange[]; notes?: string; productos_cargados?: boolean };
+
+export type MaintenanceError =
+  | "unauthorized"
+  | "forbidden"
+  | "not_found"
+  | "validation"
+  | "not_editable"
+  | "invalid_value"
+  | "invalid_action"
+  | "unavailable";
+
+/** `message` trae el texto de Odoo para mostrar al empleado cuando `error` es "validation". */
+export type MaintenanceResult<T> = { ok: true; data: T } | { ok: false; error: MaintenanceError; message?: string };
+
+const MAINTENANCE_ERRORS = ["not_editable", "invalid_value", "invalid_action", "invalid_json"];
+
+async function maintenanceRequest<T>(path: string, token: string, init: RequestInit): Promise<MaintenanceResult<T>> {
+  try {
+    const { res, data } = await odooFetch(`/tms/api/portal/maintenance${path}`, { ...init, token });
+    if (res.ok && data?.ok) return { ok: true, data: data.data };
+    if (res.status === 401) return { ok: false, error: "unauthorized" };
+    if (res.status === 403) return { ok: false, error: "forbidden" };
+    if (res.status === 404) return { ok: false, error: "not_found" };
+    if (res.status === 400 && data?.error === "validation") {
+      return { ok: false, error: "validation", message: String(data.message ?? "") };
+    }
+    if (res.status === 400 && MAINTENANCE_ERRORS.includes(data?.error)) {
+      return { ok: false, error: data.error === "invalid_json" ? "invalid_value" : data.error };
+    }
+    console.error("[odoo] mantenimiento: respuesta inesperada", path, res.status, data);
+  } catch (error) {
+    unstable_rethrow(error);
+    console.error("[odoo] mantenimiento: no se pudo conectar", path, error);
+  }
+  return { ok: false, error: "unavailable" };
+}
+
+export function odooGetMaintenance(token: string) {
+  return maintenanceRequest<Maintenance>("", token, { method: "GET" });
+}
+
+export function odooGetMaintenanceOrder(token: string, id: number) {
+  return maintenanceRequest<MaintenanceOrderDetail>(`/${id}`, token, { method: "GET" });
+}
+
+/** Guarda tareas (Pendiente / Hecho, empleado, inicio y fin), notas y Productos Cargados. */
+export function odooSaveMaintenanceOrder(token: string, id: number, changes: MaintenanceChanges) {
+  return maintenanceRequest<MaintenanceOrderDetail>(`/${id}/save`, token, {
+    method: "POST",
+    body: JSON.stringify(changes),
+  });
+}
+
+/** Iniciar (inicio = ahora, borra el fin) o Detener (fin = ahora) una tarea. */
+export function odooMaintenanceLineAction(token: string, id: number, lineId: number, action: "start" | "stop") {
+  return maintenanceRequest<MaintenanceOrderDetail>(`/${id}/line/${lineId}/${action}`, token, { method: "POST" });
+}
+
+/** Abierta → En Reparación (`repair`) → Finalizada (`finalize`). */
+export function odooMaintenanceState(token: string, id: number, action: "repair" | "finalize") {
+  return maintenanceRequest<MaintenanceOrderDetail>(`/${id}/state`, token, {
+    method: "POST",
+    body: JSON.stringify({ action }),
+  });
 }

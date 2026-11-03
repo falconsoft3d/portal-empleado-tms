@@ -21,11 +21,11 @@ export async function proxyOdooImage(odooPath: string, maxAgeSeconds: number) {
 }
 
 /** Reenvía un archivo descargable de Odoo (conserva el nombre del archivo). */
-export async function proxyOdooFile(odooPath: string) {
+export async function proxyOdooFile(odooPath: string, timeoutMs?: number) {
   const session = await getSession();
   if (!session) return new Response("No autorizado", { status: 401 });
 
-  const file = await odooGetBinary(session.odooToken, odooPath);
+  const file = await odooGetBinary(session.odooToken, odooPath, timeoutMs);
   if (!file?.body) return new Response("No encontrado", { status: 404 });
 
   const headers: Record<string, string> = {

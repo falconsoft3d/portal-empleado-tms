@@ -10,6 +10,8 @@ export type SessionPayload = {
   company: string;
   /** Token firmado por Odoo para las llamadas del empleado. */
   odooToken: string;
+  /** Responsable de Mantenimiento (menú Mantenimiento). Falta en sesiones abiertas antes de existir el campo. */
+  maintenance?: boolean;
 };
 
 function secretKey() {
@@ -41,6 +43,7 @@ export async function decrypt(token: string | undefined): Promise<SessionPayload
       jobTitle: payload.jobTitle,
       company: payload.company,
       odooToken: payload.odooToken,
+      maintenance: typeof payload.maintenance === "boolean" ? payload.maintenance : undefined,
     };
   } catch {
     return null;

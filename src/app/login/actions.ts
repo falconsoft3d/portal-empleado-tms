@@ -32,6 +32,7 @@ export async function login(_prev: LoginState, formData: FormData): Promise<Logi
     jobTitle: employee.job_title,
     company: employee.company,
     odooToken: token,
+    maintenance: Boolean(employee.responsable_mantenimiento),
   });
   redirect("/");
 }

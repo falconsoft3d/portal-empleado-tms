@@ -17,6 +17,7 @@ export async function GET(request: NextRequest) {
     jobTitle: employee.job_title,
     company: employee.company,
     odooToken: token,
+    maintenance: Boolean(employee.responsable_mantenimiento),
   });
   return NextResponse.redirect(new URL("/", request.nextUrl));
 }
