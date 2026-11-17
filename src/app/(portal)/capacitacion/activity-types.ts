@@ -7,4 +7,6 @@ export const ACTIVITY_TYPE_LABELS: Record<ActivityType, string> = {
   verdadero_falso: "Verdadero o falso",
   ordenar: "Ordenar los pasos",
   relacionar: "Relacionar parejas",
+  marcar_incorrectas: "Marcar las incorrectas",
+  respuesta_escrita: "Respuesta escrita",
 };

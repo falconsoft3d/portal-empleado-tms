@@ -300,7 +300,15 @@ export async function odooGetResources(token: string): Promise<Resource[] | null
 
 export type CourseLink = { id: number; name: string; url: string };
 
-export type ActivityType = "examen" | "completar" | "imagen" | "verdadero_falso" | "ordenar" | "relacionar";
+export type ActivityType =
+  | "examen"
+  | "completar"
+  | "imagen"
+  | "verdadero_falso"
+  | "ordenar"
+  | "relacionar"
+  | "marcar_incorrectas"
+  | "respuesta_escrita";
 
 export type CourseActivity = { id: number; name: string; type: ActivityType; passed: boolean };
 
@@ -408,6 +416,9 @@ export async function odooFinishContent(
 /**
  * Actividad para realizar. `questions` trae el enunciado (y las 3 opciones si es examen);
  * en "ordenar" vienen mezcladas y en "relacionar" `pairs` son las parejas mezcladas.
+ * En "marcar_incorrectas" cada pregunta es una imagen (sin texto), en orden mezclado.
+ * En "respuesta_escrita" cada pregunta es abierta: `min_chars`/`max_chars` limitan el largo del texto y
+ * `written_answers` trae lo que el empleado ya respondió (si aprobó), por id de pregunta.
  */
 export type ActivityDetail = {
   id: number;
@@ -420,16 +431,32 @@ export type ActivityDetail = {
   final: boolean;
   content: { id: number; name: string } | null;
   course_id: number;
-  questions: { id: number; text: string; options: string[] }[];
+  questions: { id: number; text: string; options: string[]; min_chars: number; max_chars: number }[];
   pairs: { id: number; text: string }[];
+  written_answers: Record<string, string>;
 };
 
-/** Respuestas por id de pregunta: opción "1"-"3", texto, verdadero/falso, posición (ordenar) o id de pareja. */
+/**
+ * Respuestas por id de pregunta: opción "1"-"3", texto, verdadero/falso, posición (ordenar), id de pareja
+ * o, en "marcar_incorrectas", si la imagen quedó marcada.
+ */
 export type ActivityAnswers = Record<string, string | number | boolean>;
 
-export type ActivityResult = { score: number; passed: boolean; min_score: number; results: Record<string, boolean> };
+/**
+ * Corrección de un envío. `message` es la devolución general (vacía si RRHH no la cargó) y `feedback` la
+ * devolución por pregunta (solo las que tienen texto), según si se acertó o no.
+ */
+export type ActivityResult = {
+  score: number;
+  passed: boolean;
+  min_score: number;
+  results: Record<string, boolean>;
+  message: string;
+  allow_retry: boolean;
+  feedback: Record<string, string>;
+};
 
-export type ActivitySubmitError = "unauthorized" | "not_found" | "invalid_data" | "unavailable";
+export type ActivitySubmitError = "unauthorized" | "not_found" | "invalid_data" | "invalid_answers" | "unavailable";
 
 export async function odooGetActivity(token: string, id: number): Promise<ActivityDetail | "not_found" | null> {
   try {
@@ -459,7 +486,7 @@ export async function odooSubmitActivity(
     if (res.ok && data?.ok) return { ok: true, result: data.result };
     if (res.status === 401) return { ok: false, error: "unauthorized" };
     if (res.status === 404) return { ok: false, error: "not_found" };
-    if (res.status === 400) return { ok: false, error: "invalid_data" };
+    if (res.status === 400) return { ok: false, error: data?.error === "invalid_answers" ? "invalid_answers" : "invalid_data" };
     console.error("[odoo] enviar actividad: respuesta inesperada", res.status, data);
   } catch (error) {
     unstable_rethrow(error);
@@ -522,7 +549,7 @@ export async function odooVerifyCertificate(code: string): Promise<VerifiedCerti
   return null;
 }
 
-export type VacationRequestState = "borrador" | "solicitado" | "aprobado";
+export type VacationRequestState = "borrador" | "solicitado" | "aprobado" | "rechazado";
 
 export type VacationRequest = {
   id: number;

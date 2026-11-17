@@ -27,6 +27,7 @@ const SUBMIT_ERRORS: Record<string, string> = {
   unauthorized: "Tu sesión expiró. Cierra sesión y vuelve a entrar.",
   not_found: "Esta actividad ya no está disponible.",
   invalid_data: "No se pudieron leer tus respuestas. Recarga la página e inténtalo de nuevo.",
+  invalid_answers: "Revisa que cada respuesta tenga el mínimo de caracteres pedido y no supere el máximo.",
   unavailable: "No se pudo conectar con el servidor. Inténtalo de nuevo.",
 };
 
@@ -35,7 +36,8 @@ function sanitizeAnswers(answers: unknown): ActivityAnswers | null {
   const clean: ActivityAnswers = {};
   for (const [key, value] of Object.entries(answers)) {
     if (!/^\d+$/.test(key)) continue;
-    if (typeof value === "string") clean[key] = value.slice(0, 200);
+    // Hasta 5001 caracteres para las respuestas escritas; Odoo valida el máximo de cada pregunta.
+    if (typeof value === "string") clean[key] = value.slice(0, 5001);
     else if (typeof value === "boolean" || (typeof value === "number" && Number.isInteger(value))) clean[key] = value;
   }
   return clean;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { CheckIcon, SpinnerIcon } from "@/components/icons";
+import { CheckIcon, SpinnerIcon, XIcon } from "@/components/icons";
 import type { VacationRequestState, Vacations as VacationsData } from "@/lib/odoo";
 import { solicitarVacaciones } from "./actions";
 
@@ -14,10 +14,13 @@ const STEPS: { state: VacationRequestState; label: string }[] = [
   { state: "aprobado", label: "Aprobado" },
 ];
 
+const REJECTED_STEPS: typeof STEPS = [...STEPS.slice(0, 2), { state: "rechazado", label: "Rechazado" }];
+
 const STATE_BADGES: Record<VacationRequestState, { label: string; className: string }> = {
   borrador: { label: "Borrador", className: "bg-surface-muted text-muted" },
   solicitado: { label: "En revisión", className: "bg-accent-soft text-accent" },
   aprobado: { label: "Aprobado", className: "bg-success-soft text-success" },
+  rechazado: { label: "Rechazado", className: "bg-danger-soft text-danger" },
 };
 
 export function formatDate(iso: string) {
@@ -41,27 +44,29 @@ function localToday() {
   return new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
 }
 
-/** Seguimiento de la solicitud: Borrador → Solicitado → Aprobado. */
+/** Seguimiento de la solicitud: Borrador → Solicitado → Aprobado o Rechazado. */
 export function Progress({ state }: { state: VacationRequestState }) {
-  const current = STEPS.findIndex((step) => step.state === state);
+  const steps = state === "rechazado" ? REJECTED_STEPS : STEPS;
+  const current = steps.findIndex((step) => step.state === state);
   return (
     <ol className="mt-3 flex items-center gap-2" aria-label="Seguimiento">
-      {STEPS.map((step, index) => {
+      {steps.map((step, index) => {
         const done = index <= current;
+        const rejected = step.state === "rechazado";
         return (
           <li key={step.state} className="flex flex-1 items-center gap-2 last:flex-none">
             <span
               className={`grid size-6 shrink-0 place-items-center rounded-full text-[11px] font-semibold ${
-                done ? "bg-success text-white" : "bg-surface-muted text-muted"
+                rejected ? "bg-danger text-white" : done ? "bg-success text-white" : "bg-surface-muted text-muted"
               }`}
               aria-current={index === current ? "step" : undefined}
             >
-              {done ? <CheckIcon className="size-3.5" /> : index + 1}
+              {rejected ? <XIcon className="size-3.5" /> : done ? <CheckIcon className="size-3.5" /> : index + 1}
             </span>
             <span className={`text-xs ${index === current ? "font-semibold text-ink" : "text-muted"}`}>
               {step.label}
             </span>
-            {index < STEPS.length - 1 && (
+            {index < steps.length - 1 && (
               <span className={`h-px flex-1 ${index < current ? "bg-success" : "bg-line"}`} />
             )}
           </li>

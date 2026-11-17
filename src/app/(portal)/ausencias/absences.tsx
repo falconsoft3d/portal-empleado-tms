@@ -11,6 +11,7 @@ const STATE_BADGES: Record<AbsenceRequestState, { label: string; className: stri
   borrador: { label: "Borrador", className: "bg-surface-muted text-muted" },
   solicitado: { label: "En revisión", className: "bg-accent-soft text-accent" },
   aprobado: { label: "Aprobado", className: "bg-success-soft text-success" },
+  rechazado: { label: "Rechazado", className: "bg-danger-soft text-danger" },
 };
 
 function RequestForm({

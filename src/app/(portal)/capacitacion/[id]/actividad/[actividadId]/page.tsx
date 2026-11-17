@@ -61,13 +61,19 @@ async function ActivityView({ params }: Pick<Props, "params">) {
                   {activity.content && ` · ${activity.content.name}`}
                 </p>
                 <h1 className="mt-0.5 text-2xl font-semibold tracking-tight text-ink">{activity.name}</h1>
-                <p className="mt-1 text-xs text-muted">Necesitas {activity.min_score}% para aprobar.</p>
+                <p className="mt-1 text-xs text-muted">
+                  {activity.type === "respuesta_escrita"
+                    ? "Respondé con tus palabras. No hay respuestas correctas o incorrectas."
+                    : `Necesitas ${activity.min_score}% para aprobar.`}
+                </p>
               </div>
             </div>
 
             {activity.passed && (
               <p className="rounded-xl bg-success-soft px-4 py-3 text-sm text-success">
-                Ya aprobaste esta actividad. Puedes repetirla si quieres practicar.
+                {activity.type === "respuesta_escrita"
+                  ? "Ya respondiste esta actividad. Estas son tus respuestas."
+                  : "Ya aprobaste esta actividad. Puedes repetirla si quieres practicar."}
               </p>
             )}
             {activity.instructions && (
